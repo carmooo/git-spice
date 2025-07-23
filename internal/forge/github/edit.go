@@ -11,7 +11,7 @@ import (
 
 // EditChange edits an existing change in a repository.
 func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts forge.EditChangeOptions) error {
-	if cmputil.Zero(opts) {
+	if cmputil.Zero(opts.Base) && cmputil.Zero(opts.Draft) && len(opts.Labels) == 0 {
 		return nil // nothing to do
 	}
 	pr := mustPR(fid)
@@ -83,6 +83,28 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 		}
 
 		r.log.Debug(logMsg, "pr", pr.Number)
+	}
+
+	if len(opts.Labels) > 0 {
+		labelIDs, err := r.GetOrCreateLabelIDs(ctx, opts.Labels)
+		if err != nil {
+			return fmt.Errorf("get label IDs: %w", err)
+		}
+
+		var addLabelsM struct {
+			AddLabelsToLabelable struct {
+				Clientmutationid githubv4.String `graphql:"clientMutationId"`
+			} `graphql:"addLabelsToLabelable(input: $input)"`
+		}
+
+		labelsInput := githubv4.AddLabelsToLabelableInput{
+			LabelableID: graphQLID,
+			LabelIDs:    labelIDs,
+		}
+
+		if err := r.client.Mutate(ctx, &addLabelsM, labelsInput, nil); err != nil {
+			return fmt.Errorf("add labels to PR: %w", err)
+		}
 	}
 
 	return nil

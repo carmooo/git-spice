@@ -54,6 +54,29 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 
 		return forge.SubmitChangeResult{}, fmt.Errorf("create pull request: %w", err)
 	}
+
+	if len(req.Labels) > 0 {
+		labelIDs, err := r.GetOrCreateLabelIDs(ctx, req.Labels)
+		if err != nil {
+			return forge.SubmitChangeResult{}, fmt.Errorf("get label IDs: %w", err)
+		}
+
+		var addLabelsM struct {
+			AddLabelsToLabelable struct {
+				Clientmutationid githubv4.String `graphql:"clientMutationId"`
+			} `graphql:"addLabelsToLabelable(input: $input)"`
+		}
+
+		labelsInput := githubv4.AddLabelsToLabelableInput{
+			LabelableID: m.CreatePullRequest.PullRequest.ID,
+			LabelIDs:    labelIDs,
+		}
+
+		if err := r.client.Mutate(ctx, &addLabelsM, labelsInput, nil); err != nil {
+			return forge.SubmitChangeResult{}, fmt.Errorf("add labels to PR: %w", err)
+		}
+	}
+
 	r.log.Debug("Created pull request",
 		"pr", m.CreatePullRequest.PullRequest.Number,
 		"url", m.CreatePullRequest.PullRequest.URL.String())
