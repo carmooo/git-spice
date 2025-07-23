@@ -152,6 +152,8 @@ type Options struct {
 	// - milestone
 	// - reviewers
 
+	Labels []string `short:"l" help:"Add labels to the change request"`
+
 	// ListTemplatesTimeout controls the timeout for listing CR templates.
 	ListTemplatesTimeout time.Duration `hidden:"" config:"submit.listTemplatesTimeout" help:"Timeout for listing CR templates" default:"1s"`
 }
@@ -921,9 +923,10 @@ func listChangeTemplates(
 type preparedBranch struct {
 	state.PreparedBranch
 
-	head  string
-	base  string
-	draft bool
+	head   string
+	base   string
+	draft  bool
+	labels []string
 
 	remoteRepo forge.Repository
 	store      Store
@@ -937,6 +940,7 @@ func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, string, e
 		Head:    b.head,
 		Base:    b.base,
 		Draft:   b.draft,
+		Labels:  b.labels,
 	})
 	if err != nil {
 		// If the branch could not be submitted because the base branch

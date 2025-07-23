@@ -298,6 +298,9 @@ type SubmitChangeRequest struct {
 
 	// Draft specifies whether the change should be marked as a draft.
 	Draft bool
+
+	// Labels are optional labels to apply to the change.
+	Labels []string // optional labels to apply to the change
 }
 
 // SubmitChangeResult is the result of creating a new change in a repository.
